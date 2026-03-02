@@ -1,6 +1,15 @@
-# secrets
-.env
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env/
 
-# VSCode local history / backups
-.history/
+# macOS / IDE
+.DS_Store
 .vscode/
+
+# Local history (VSCode extensions etc.)
+.history/
