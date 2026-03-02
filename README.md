@@ -30,12 +30,14 @@ I wanted to better understand:
 ---
 
 ## Project Structure
+
 ai-agent-workflow-demo/
-├── main.py # entry point
+│
+├── main.py
 ├── agents/
-│ └── worker.py # workflow task execution
+│   └── worker.py
 ├── services/
-│ └── openai_client.py # OpenAI API wrapper
+│   └── openai_client.py
 ├── .env.example
 └── README.md
 ---
@@ -76,3 +78,4 @@ Async task execution
 Multiple agent roles (planner / reviewer)
 
 Web interface
+
