@@ -29,8 +29,9 @@ I wanted to better understand:
 
 ---
 
-## Project Structure ```
+## Project Structure 
 
+```
 ai-agent-workflow-demo/
 │
 ├── main.py
@@ -79,5 +80,6 @@ Async task execution
 Multiple agent roles (planner / reviewer)
 
 Web interface
+
 
 
