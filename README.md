@@ -29,7 +29,7 @@ I wanted to better understand:
 
 ---
 
-## Project Structure
+## Project Structure ```
 
 ai-agent-workflow-demo/
 │
@@ -40,6 +40,7 @@ ai-agent-workflow-demo/
 │   └── openai_client.py
 ├── .env.example
 └── README.md
+```
 ---
 
 ## Setup
@@ -78,4 +79,5 @@ Async task execution
 Multiple agent roles (planner / reviewer)
 
 Web interface
+
 
