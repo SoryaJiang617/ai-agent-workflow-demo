@@ -1,0 +1,6 @@
+# secrets
+.env
+
+# VSCode local history / backups
+.history/
+.vscode/
