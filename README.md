@@ -27,15 +27,21 @@ python main.py
 
 A successful run with `N` steps makes `1 + N + 1` model calls, at most five. Blank input stops before any call. An invalid plan or failed model call stops the workflow at the affected stage. There are no automatic retries.
 
-## Three-minute interview walkthrough
+## Example Workflow
 
-**First minute.** Start the CLI and enter this request.
+### Step 1: Enter a request
+
+Start the CLI and enter this request.
 
 > Write an email to a customer explaining that their order will arrive two days late. Keep the entire email under 100 words.
 
-**Second minute.** Point to the plan printed before the Worker starts. For this request, an illustrative plan is `["Draft a customer email explaining the two-day delay in under 100 words."]`. Compare it with “Create a marketing plan for a coffee shop,” which might call for identifying a target audience and then building a campaign for that audience. The actual steps can vary by run.
+### Step 2: Inspect the generated plan
 
-**Third minute.** Read the final email. Check that it says *two days* and that the displayed word count is below 100, including the subject and sign-off. Python counts the final text locally. The Reviewer interprets the user's length instruction, so use the displayed count to verify the result. A possible final email is shown below.
+Point to the plan printed before the Worker starts. For this request, an illustrative plan is `["Draft a customer email explaining the two-day delay in under 100 words."]`. Compare it with “Create a marketing plan for a coffee shop,” which might call for identifying a target audience and then building a campaign for that audience. The actual steps can vary by run.
+
+### Step 3: Review the final output
+
+Read the final email. Check that it says *two days* and that the displayed word count is below 100, including the subject and sign-off. Python counts the final text locally. The Reviewer interprets the user's length instruction, so use the displayed count to verify the result. A possible final email is shown below.
 
 > Subject: Your order will arrive two days late
 >
