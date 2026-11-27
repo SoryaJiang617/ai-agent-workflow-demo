@@ -23,9 +23,9 @@ python main.py
 
 1. **Planner** asks the model for a JSON list of one to three task descriptions and validates the response. The prompt asks for one step when a single draft will do. The CLI displays the plan before execution.
 2. **Worker** executes each step in order. It receives the original request and the previous step’s result, keeping details such as the audience and word limit in view.
-3. **Reviewer** reads the original request, the final draft, and its whitespace-separated word count. It revises the draft for accuracy, format, tone and explicit length limits in one pass. The CLI displays the revised answer and its freshly computed word count on separate lines.
+3. **Reviewer** checks the draft against the original request. For an email draft, it returns a subject and body. Python assembles the email and checks explicit English limits such as `under 100 words` against the whole text, including the subject and sign-off. The CLI displays the verified email and its word count separately.
 
-A successful run with `N` steps makes `1 + N + 1` model calls, at most five. Blank input stops before any call. An invalid plan or failed model call stops the workflow at the affected stage. There are no automatic retries.
+A run with `N` steps normally makes `1 + N + 1` model calls. If an email fails format or length validation, only the Reviewer gets one more attempt, bringing the maximum to six calls. A second invalid email stops the workflow before the CLI displays a final answer. Blank input stops before any call. An invalid plan or failed API request stops the workflow at the affected stage.
 
 ## Example Workflow
 
@@ -41,7 +41,7 @@ Point to the plan printed before the Worker starts. For this request, an illustr
 
 ### Step 3: Review the final output
 
-Read the final email. Check that it says *two days* and that the displayed word count is below 100, including the subject and sign-off. Python counts the final text locally. The Reviewer interprets the user's length instruction, so use the displayed count to verify the result. A possible final email is shown below.
+Read the final email and check that it says *two days*. For this request, Python accepts at most 99 whitespace-separated words, including the `Subject:` label and sign-off. A possible final email is shown below.
 
 > Subject: Your order will arrive two days late
 >

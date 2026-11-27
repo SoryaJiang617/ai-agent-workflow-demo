@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import sys
 import unittest
@@ -6,6 +7,18 @@ from unittest.mock import Mock, patch
 
 from main import main, run_agent_workflow
 from services import openai_client
+
+
+DELAY_REQUEST = (
+    "Write an email to a customer explaining that their order will arrive two days late. "
+    "Keep the entire email under 100 words."
+)
+
+
+def email_of_length(word_count):
+    # "Subject: Delay" and "Customer Care" contribute four words to the whole email.
+    body = " ".join(["Update"] * (word_count - 4)) + "\n\nCustomer Care"
+    return json.dumps({"subject": "Delay", "body": body})
 
 
 class WorkflowTests(unittest.TestCase):
@@ -25,9 +38,13 @@ class WorkflowTests(unittest.TestCase):
         request = "Write an English email about a two-day delay in at most 100 words."
         self.planner.return_value = '["Draft the delay email"]'
         self.worker.return_value = "First draft for the customer."
-        self.reviewer.return_value = "Your order will arrive two days later than expected."
+        self.reviewer.return_value = json.dumps({
+            "subject": "Delivery update",
+            "body": "Your order will arrive two days later than expected.",
+        })
 
-        self.assertEqual(run_agent_workflow(request), self.reviewer.return_value)
+        self.assertEqual(run_agent_workflow(request),
+                         "Subject: Delivery update\n\nYour order will arrive two days later than expected.")
 
         self.planner.assert_called_once()
         self.worker.assert_called_once()
@@ -69,11 +86,69 @@ class WorkflowTests(unittest.TestCase):
         self.patch("builtins.input", return_value="Draft an email under 100 words.")
         self.planner.return_value = '["Write the email"]'
         self.worker.return_value = "Draft " * 105
-        self.reviewer.return_value = "Subject: Order update\n\nYour delivery is delayed."
+        self.reviewer.return_value = json.dumps({"subject": "Order update", "body": "Your delivery is delayed."})
         self.assertEqual(main(), 0)
         self.assertIn("whitespace-separated words): 105", self.reviewer.call_args.args[1])
-        self.assertIn(self.reviewer.return_value, self.output.getvalue())
+        self.assertIn("Subject: Order update\n\nYour delivery is delayed.", self.output.getvalue())
         self.assertIn("Word count (whitespace-separated): 7", self.output.getvalue())
+
+    def test_strict_limit_repairs_100_words_to_99_without_rerunning_other_roles(self):
+        self.planner.return_value = '["Write the email"]'
+        self.worker.return_value = "Initial draft."
+        self.reviewer.side_effect = [email_of_length(100), email_of_length(99)]
+
+        result = run_agent_workflow(DELAY_REQUEST)
+
+        self.assertEqual(len(result.split()), 99)
+        self.assertTrue(result.startswith("Subject: Delay\n\n"))
+        self.assertTrue(result.endswith("Customer Care"))
+        self.planner.assert_called_once()
+        self.worker.assert_called_once()
+        self.assertEqual(self.reviewer.call_count, 2)
+
+    def test_at_most_100_words_allows_exactly_100(self):
+        self.planner.return_value = '["Write the email"]'
+        self.worker.return_value = "Initial draft."
+        self.reviewer.return_value = email_of_length(100)
+
+        result = run_agent_workflow("Write an email in at most 100 words.")
+
+        self.assertTrue(result.startswith("Subject: Delay\n\n"))
+        self.assertEqual(len(result.split()), 100)
+        self.reviewer.assert_called_once()
+
+    def test_only_clean_email_is_returned_after_malformed_or_annotated_response(self):
+        body = "Hello,\n\nYour order will arrive two days late.\n\nCustomer Care"
+        email = {"subject": "Delivery update", "body": body}
+        bad_responses = (
+            "invalid JSON",
+            json.dumps([email, email]),
+            json.dumps(dict(email, notes="Fill the placeholders before sending.")),
+            json.dumps(dict(email, body=body + "\n\nRevised Email:\nSubject: Delay\nDear Customer,")),
+            json.dumps(dict(email, body=body + "\n\nWord count: 94")),
+            json.dumps(dict(email, body=body + "\n\n(Word count: 92)")),
+        )
+        self.planner.return_value = '["Write the email"]'
+        self.worker.return_value = "A first draft and a second draft. Word count: 94"
+        for response in bad_responses:
+            with self.subTest(response=response):
+                self.reviewer.reset_mock()
+                self.reviewer.side_effect = [response, json.dumps(email)]
+                result = run_agent_workflow(DELAY_REQUEST)
+                self.assertEqual(result, "Subject: Delivery update\n\n" + body)
+                self.assertEqual(self.reviewer.call_count, 2)
+
+    def test_cli_reports_review_failure_after_two_invalid_attempts(self):
+        self.patch("builtins.input", return_value=DELAY_REQUEST)
+        errors = self.patch("sys.stderr", new_callable=io.StringIO)
+        self.planner.return_value = '["Write the email"]'
+        self.worker.return_value = "An initial draft."
+        self.reviewer.return_value = email_of_length(101)
+
+        self.assertEqual(main(), 1)
+        self.assertIn("Review failed", errors.getvalue())
+        self.assertNotIn("FINAL OUTPUT", self.output.getvalue())
+        self.assertEqual(self.reviewer.call_count, 2)
 
     def test_invalid_plans_stop_before_execution(self):
         bad_plans = (
